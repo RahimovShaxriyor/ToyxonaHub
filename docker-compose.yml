@@ -1,0 +1,166 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: toyxonahub_postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-toyxona_user}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-toyxona_password}
+      POSTGRES_DB: ${POSTGRES_DB:-toyxonahub}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-toyxona_user} -d ${POSTGRES_DB:-toyxonahub}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - toyxonahub-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: toyxonahub_redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+    networks:
+      - toyxonahub-network
+
+  minio:
+    image: quay.io/minio/minio:latest
+    container_name: toyxonahub_minio
+    restart: unless-stopped
+    command: server /data --console-address ":9001"
+    ports:
+      - "${S3_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-minioadmin}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-minioadmin}
+    volumes:
+      - minio_data:/data
+    networks:
+      - toyxonahub-network
+
+  minio-init:
+    image: quay.io/minio/mc:latest
+    container_name: toyxonahub_minio_init
+    depends_on:
+      - minio
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set myminio http://minio:9000 ${S3_ACCESS_KEY:-minioadmin} ${S3_SECRET_KEY:-minioadmin}; do
+        echo 'Waiting for MinIO service...';
+        sleep 1;
+      done;
+      mc mb --ignore-existing myminio/${S3_BUCKET:-toyxonahub-images};
+      mc anonymous set download myminio/${S3_BUCKET:-toyxonahub-images};
+      echo 'MinIO bucket initialized successfully';
+      exit 0;
+      "
+    networks:
+      - toyxonahub-network
+
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: toyxonahub_mailpit
+    restart: unless-stopped
+    ports:
+      - "${SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_WEB_PORT:-8025}:8025"
+    networks:
+      - toyxonahub-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: toyxonahub_backend
+    restart: unless-stopped
+    ports:
+      - "${PORT:-5050}:5050"
+    environment:
+      NODE_ENV: production
+      PORT: 5050
+      DATABASE_URL: postgresql://${POSTGRES_USER:-toyxona_user}:${POSTGRES_PASSWORD:-toyxona_password}@postgres:5432/${POSTGRES_DB:-toyxonahub}?schema=public
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-toyxonahub_super_secret_access_jwt_key_2026}
+      JWT_REFRESH_SECRET: ${JWT_REFRESH_SECRET:-toyxonahub_super_secret_refresh_jwt_key_2026}
+      JWT_ACCESS_EXPIRES_IN: ${JWT_ACCESS_EXPIRES_IN:-15m}
+      JWT_REFRESH_EXPIRES_IN: ${JWT_REFRESH_EXPIRES_IN:-7d}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
+      SMTP_SECURE: "false"
+      SMTP_USER: ""
+      SMTP_PASS: ""
+      EMAIL_FROM: ${EMAIL_FROM:-noreply@toyxonahub.uz}
+      REDIS_URL: redis://redis:6379
+      CACHE_TTL_SECONDS: ${CACHE_TTL_SECONDS:-300}
+      OTP_EXPIRES_SECONDS: ${OTP_EXPIRES_SECONDS:-300}
+      OTP_MAX_ATTEMPTS: ${OTP_MAX_ATTEMPTS:-5}
+      S3_ENDPOINT: http://minio:9000
+      S3_PUBLIC_URL: ${S3_PUBLIC_URL:-http://localhost:9000}
+      S3_REGION: ${S3_REGION:-us-east-1}
+      S3_BUCKET: ${S3_BUCKET:-toyxonahub-images}
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:-minioadmin}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:-minioadmin}
+      S3_FORCE_PATH_STYLE: "true"
+      UPLOAD_DIR: ./uploads
+      FRONTEND_URL: ${FRONTEND_URL:-*}
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_started
+      minio-init:
+        condition: service_completed_successfully
+      mailpit:
+        condition: service_started
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:5050/health || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+    networks:
+      - toyxonahub-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: toyxonahub_frontend
+    restart: unless-stopped
+    ports:
+      - "${FRONTEND_PORT:-5173}:80"
+    depends_on:
+      backend:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://127.0.0.1:80/ || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
+    networks:
+      - toyxonahub-network
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
+
+networks:
+  toyxonahub-network:
+    driver: bridge

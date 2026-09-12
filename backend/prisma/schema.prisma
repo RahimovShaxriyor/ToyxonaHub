@@ -1,0 +1,232 @@
+// Prisma Schema for ToyxonaHub - Online Wedding Hall Booking System
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  OWNER
+  USER
+}
+
+enum District {
+  BEKTEMIR
+  CHILONZOR
+  YASHNOBOD
+  MIROBOD
+  MIRZO_ULUGBEK
+  SERGELI
+  SHAYXONTOHUR
+  OLMAZOR
+  UCHTEPA
+  YAKKASAROY
+  YUNUSOBOD
+  YANGIHAYOT
+}
+
+enum HallStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum BookingStatus {
+  ACTIVE
+  CANCELLED
+  COMPLETED
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+}
+
+enum ServiceType {
+  SINGER
+  KARNAY_SURNAY
+  MENU
+  CAR
+}
+
+model User {
+  id            String         @id @default(uuid())
+  firstName     String
+  lastName      String
+  email         String         @unique
+  username      String         @unique
+  passwordHash  String
+  phone         String
+  role          Role           @default(USER)
+  emailVerified Boolean        @default(false)
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+
+  ownedHalls    WeddingHall[]
+  bookings      Booking[]
+  refreshTokens RefreshToken[]
+  otpCodes      OtpCode[]
+
+  @@index([role])
+  @@index([email])
+  @@index([username])
+}
+
+model RefreshToken {
+  id         String   @id @default(uuid())
+  tokenHash  String   @unique
+  userId     String
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt  DateTime
+  revoked    Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  @@index([userId])
+  @@index([tokenHash])
+}
+
+model OtpCode {
+  id        String   @id @default(uuid())
+  email     String
+  codeHash  String
+  userId    String?
+  user      User?    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  isUsed    Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
+}
+
+model WeddingHall {
+  id           String                @id @default(uuid())
+  name         String
+  district     District
+  address      String
+  capacity     Int
+  pricePerSeat Decimal               @db.Decimal(14, 2)
+  phone        String
+  status       HallStatus            @default(PENDING)
+  ownerId      String?
+  owner        User?                 @relation(fields: [ownerId], references: [id], onDelete: SetNull)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  images       WeddingHallImage[]
+  singers      Singer[]
+  cars         Car[]
+  menuOptions  MenuOption[]
+  karnaySurnay KarnaySurnayService?
+  bookings     Booking[]
+
+  @@index([status])
+  @@index([district])
+  @@index([ownerId])
+}
+
+model WeddingHallImage {
+  id            String      @id @default(uuid())
+  weddingHallId String
+  weddingHall   WeddingHall @relation(fields: [weddingHallId], references: [id], onDelete: Cascade)
+  url           String
+  isPrimary     Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+
+  @@index([weddingHallId])
+}
+
+model Singer {
+  id            String      @id @default(uuid())
+  weddingHallId String
+  weddingHall   WeddingHall @relation(fields: [weddingHallId], references: [id], onDelete: Cascade)
+  name          String
+  price         Decimal     @db.Decimal(14, 2)
+  image         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([weddingHallId])
+}
+
+model Car {
+  id            String      @id @default(uuid())
+  weddingHallId String
+  weddingHall   WeddingHall @relation(fields: [weddingHallId], references: [id], onDelete: Cascade)
+  brand         String
+  price         Decimal     @db.Decimal(14, 2)
+  image         String?
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([weddingHallId])
+}
+
+model MenuOption {
+  id            String      @id @default(uuid())
+  weddingHallId String
+  weddingHall   WeddingHall @relation(fields: [weddingHallId], references: [id], onDelete: Cascade)
+  name          String
+  price         Decimal     @default(0) @db.Decimal(14, 2)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([weddingHallId])
+}
+
+model KarnaySurnayService {
+  id            String      @id @default(uuid())
+  weddingHallId String      @unique
+  weddingHall   WeddingHall @relation(fields: [weddingHallId], references: [id], onDelete: Cascade)
+  available     Boolean     @default(true)
+  price         Decimal     @db.Decimal(14, 2)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+}
+
+model Booking {
+  id             String                   @id @default(uuid())
+  weddingHallId  String
+  weddingHall    WeddingHall              @relation(fields: [weddingHallId], references: [id], onDelete: Restrict)
+  userId         String
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Restrict)
+  bookingDate    DateTime                 @db.Date
+  guestCount     Int
+  firstName      String
+  lastName       String
+  phone          String
+  hallPrice      Decimal                  @db.Decimal(14, 2)
+  servicesPrice  Decimal                  @db.Decimal(14, 2)
+  totalPrice     Decimal                  @db.Decimal(14, 2)
+  advanceAmount  Decimal                  @db.Decimal(14, 2)
+  status         BookingStatus            @default(ACTIVE)
+  paymentStatus  PaymentStatus            @default(PENDING)
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+
+  selectedServices BookingSelectedService[]
+
+  @@index([weddingHallId])
+  @@index([userId])
+  @@index([bookingDate])
+  @@index([status])
+}
+
+model BookingSelectedService {
+  id              String      @id @default(uuid())
+  bookingId       String
+  booking         Booking     @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  sourceServiceId String?
+  serviceType     ServiceType
+  nameSnapshot    String
+  priceSnapshot   Decimal     @db.Decimal(14, 2)
+  createdAt       DateTime    @default(now())
+
+  @@index([bookingId])
+}

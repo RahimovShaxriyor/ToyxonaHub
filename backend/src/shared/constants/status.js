@@ -1,0 +1,25 @@
+export const HALL_STATUS = {
+  PENDING: 'PENDING',
+  APPROVED: 'APPROVED',
+  REJECTED: 'REJECTED',
+};
+
+export const BOOKING_STATUS = {
+  ACTIVE: 'ACTIVE',
+  CANCELLED: 'CANCELLED',
+  COMPLETED: 'COMPLETED',
+};
+
+export const PAYMENT_STATUS = {
+  PENDING: 'PENDING',
+  PAID: 'PAID',
+};
+
+export const SERVICE_TYPES = {
+  SINGER: 'SINGER',
+  KARNAY_SURNAY: 'KARNAY_SURNAY',
+  MENU: 'MENU',
+  CAR: 'CAR',
+};
+
+export const ADVANCE_PAYMENT_PERCENTAGE = 0.2;

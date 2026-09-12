@@ -1,0 +1,92 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --canvas: #FAFAF8;
+    --surface: #FFFFFF;
+    --ink: #181817;
+    --muted: #6D6A63;
+    --border: #E8E5E0;
+    --bronze: #9A6B3F;
+    --bronze-hover: #805632;
+  }
+
+  body {
+    background-color: #FAFAF8;
+    color: #181817;
+    font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  /* Custom smooth scrollbar */
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: #FAFAF8;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: #D5D1CB;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: #9E9B93;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .motion-fast {
+    transition-duration: 150ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-normal {
+    transition-duration: 250ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-slow {
+    transition-duration: 450ms;
+    transition-timing-function: cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .motion-hero {
+    transition-duration: 800ms;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-hero-zoom {
+    animation: none !important;
+    transform: none !important;
+  }
+
+  .animate-fade-slide-up {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+
+  .hero-slide-bg {
+    transform: none !important;
+    transition: opacity 200ms ease !important;
+  }
+
+  .group-hover\:scale-\[1\.03\],
+  .hover\:-translate-y-1,
+  .hover\:-translate-y-0\.5 {
+    transform: none !important;
+  }
+}

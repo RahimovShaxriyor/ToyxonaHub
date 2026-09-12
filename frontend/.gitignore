@@ -1,0 +1,30 @@
+# Dependencies
+node_modules/
+
+# Environment Variables
+.env
+.env.local
+.env.*
+!.env.example
+
+# Build and Test Outputs
+dist/
+coverage/
+playwright-report/
+test-results/
+e2e-screenshots/
+
+# Cache & Temp
+.cache/
+.vite/
+tmp/
+temp/
+
+# Logs & OS
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+.idea/
+.vscode/
