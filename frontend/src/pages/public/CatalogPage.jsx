@@ -8,7 +8,7 @@ import EmptyState from '../../components/ui/EmptyState';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
-import { TASHKENT_DISTRICTS, SORT_OPTIONS } from '../../constants/districts';
+import { DISTRICT_OPTIONS, SORT_OPTIONS } from '../../constants/districts';
 import { Filter, SlidersHorizontal, X, RotateCcw, Building2 } from 'lucide-react';
 
 export function CatalogPage() {
@@ -96,7 +96,7 @@ export function CatalogPage() {
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 page-enter">
       {/* Page Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
         <div>
@@ -170,7 +170,7 @@ export function CatalogPage() {
               value={district}
               onChange={(e) => setDistrict(e.target.value)}
               placeholder="Barcha tumanlar"
-              options={TASHKENT_DISTRICTS.map((d) => ({ value: d, label: `${d} tumani` }))}
+              options={DISTRICT_OPTIONS}
             />
 
             {/* Capacity Range */}
@@ -253,7 +253,7 @@ export function CatalogPage() {
                   value={district}
                   onChange={(e) => setDistrict(e.target.value)}
                   placeholder="Barcha tumanlar"
-                  options={TASHKENT_DISTRICTS.map((d) => ({ value: d, label: `${d} tumani` }))}
+                  options={DISTRICT_OPTIONS}
                 />
 
                 <div className="grid grid-cols-2 gap-2">

@@ -12,8 +12,10 @@ import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Modal from '../../components/ui/Modal';
 import Badge from '../../components/ui/Badge';
-import Skeleton from '../../components/ui/Skeleton';
+import Skeleton, { HallDetailSkeleton } from '../../components/ui/Skeleton';
 import { formatPrice, formatDate, formatFriendlyDate } from '../../utils/formatters';
+import { cleanPhoneNumber } from '../../utils/phone';
+import { normalizeApiError } from '../../utils/error';
 import {
   MapPin,
   Phone,
@@ -142,6 +144,7 @@ export function HallDetailPage() {
     if (!isAuthenticated) {
       // Save draft to sessionStorage so user doesn't lose selections
       savePendingBooking(id, {
+        hallName: hall?.name || '',
         selectedDate,
         guestCount,
         selectedSingerId,
@@ -177,7 +180,8 @@ export function HallDetailPage() {
         toast.error("Kechirasiz, tanlangan sana allaqachon band qilingan! Iltimos, kalendardan boshqa sanani tanlang.");
         queryClient.invalidateQueries({ queryKey: ['hall-availability', id] });
       } else {
-        toast.error(err.response?.data?.message || 'Bron qilishda xatolik yuz berdi.');
+        const normalized = normalizeApiError(err, 'Bron qilishda xatolik yuz berdi.');
+        toast.error(normalized.message);
       }
     },
   });
@@ -194,13 +198,19 @@ export function HallDetailPage() {
       return;
     }
 
+    const cleanedPhone = cleanPhoneNumber(phone);
+    if (!cleanedPhone || !/^\+998\d{9}$/.test(cleanedPhone)) {
+      toast.error("Telefon raqamini to'g'ri formatda kiriting (masalan: +998901234567).");
+      return;
+    }
+
     const payload = {
       weddingHallId: id,
       bookingDate: selectedDate,
       guestCount: Number(guestCount),
-      firstName,
-      lastName,
-      phone,
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      phone: cleanedPhone,
       selectedSingerId: selectedSingerId || undefined,
       selectedCarId: selectedCarId || undefined,
       selectedMenuId: selectedMenuId || undefined,
@@ -213,32 +223,24 @@ export function HallDetailPage() {
   // Pay Advance Mutation
   const payMutation = useMutation({
     mutationFn: (bookingId) => bookingsApi.payBooking(bookingId),
-    onSuccess: (res) => {
+    onSuccess: () => {
       setIsPaymentModalOpen(false);
-      toast.success(res.message || "Muvaffaqiyatli to'landi");
+      toast.success("Muvaffaqiyatli to'landi");
       navigate('/my-bookings');
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || "To'lovni amalga oshirishda xatolik yuz berdi.");
+      const normalized = normalizeApiError(err, "To'lovni amalga oshirishda xatolik yuz berdi.");
+      toast.error(normalized.message);
     },
   });
 
   if (isHallLoading) {
-    return (
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-8">
-        <Skeleton className="h-10 w-1/3" />
-        <Skeleton className="h-96 w-full rounded-2xl" />
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <Skeleton className="h-64 lg:col-span-2 rounded-2xl" />
-          <Skeleton className="h-64 rounded-2xl" />
-        </div>
-      </div>
-    );
+    return <HallDetailSkeleton />;
   }
 
   if (hallError || !hall) {
     return (
-      <div className="max-w-2xl mx-auto px-4 py-20 text-center">
+      <div className="max-w-2xl mx-auto px-4 py-20 text-center animate-in fade-in duration-ui">
         <AlertCircle className="w-12 h-12 text-rose-600 mx-auto mb-3" />
         <h2 className="text-xl font-bold text-ink">To'yxona topilmadi</h2>
         <p className="text-sm text-muted mt-2">
@@ -257,7 +259,7 @@ export function HallDetailPage() {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 pb-28 lg:pb-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-12 pb-28 lg:pb-12 page-enter">
       {/* Header Info */}
       <div className="space-y-3">
         <div className="flex flex-wrap items-center gap-2">
@@ -282,7 +284,7 @@ export function HallDetailPage() {
           </span>
           <span className="flex items-center gap-1.5">
             <Phone className="w-4 h-4 text-bronze shrink-0" />
-            {hall.contactPhone}
+            <span>{hall.phone || hall.contactPhone}</span>
           </span>
         </div>
       </div>
@@ -370,6 +372,12 @@ export function HallDetailPage() {
                 xizmatlarini bron qiling.
               </p>
             </div>
+
+            {services.length === 0 && (
+              <div className="text-center py-8 px-4 text-muted text-xs bg-canvas/60 rounded-xl border border-dashed border-border">
+                Xizmatlar mavjud emas
+              </div>
+            )}
 
             {/* Singers */}
             {singers.length > 0 && (

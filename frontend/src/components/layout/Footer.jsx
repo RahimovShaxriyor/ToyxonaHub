@@ -1,7 +1,8 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { Building2, Phone, MapPin } from 'lucide-react';
-import { TASHKENT_DISTRICTS } from '../../constants/districts';
+import { TASHKENT_DISTRICTS, getDistrictLabel } from '../../constants/districts';
+import { SITE_CONFIG } from '../../config/site';
 
 export function Footer() {
   return (
@@ -26,11 +27,11 @@ export function Footer() {
             <div className="flex items-center gap-4 text-xs text-muted pt-2">
               <div className="flex items-center gap-1.5">
                 <MapPin className="w-4 h-4 text-bronze shrink-0" />
-                <span>Toshkent, O'zbekiston</span>
+                <span>{SITE_CONFIG.address}</span>
               </div>
               <div className="flex items-center gap-1.5">
                 <Phone className="w-4 h-4 text-bronze shrink-0" />
-                <span>+998 71 200 00 00</span>
+                <span>{SITE_CONFIG.supportPhone}</span>
               </div>
             </div>
           </div>
@@ -47,7 +48,7 @@ export function Footer() {
                     to={`/catalog?district=${encodeURIComponent(dist)}`}
                     className="hover:text-bronze transition-colors"
                   >
-                    {dist} tumani
+                    {getDistrictLabel(dist)} tumani
                   </Link>
                 </li>
               ))}
@@ -66,7 +67,7 @@ export function Footer() {
                     to={`/catalog?district=${encodeURIComponent(dist)}`}
                     className="hover:text-bronze transition-colors"
                   >
-                    {dist} tumani
+                    {getDistrictLabel(dist)} tumani
                   </Link>
                 </li>
               ))}

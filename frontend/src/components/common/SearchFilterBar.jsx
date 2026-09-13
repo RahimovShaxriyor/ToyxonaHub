@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { TASHKENT_DISTRICTS } from '../../constants/districts';
+import { DISTRICT_OPTIONS } from '../../constants/districts';
 import { MapPin, Calendar, Users, DollarSign, Search } from 'lucide-react';
 import Button from '../ui/Button';
 
@@ -55,9 +55,9 @@ export function SearchFilterBar({
               className="w-full bg-transparent text-sm font-medium text-ink focus:outline-none cursor-pointer truncate"
             >
               <option value="">Barcha tumanlar</option>
-              {TASHKENT_DISTRICTS.map((d) => (
-                <option key={d} value={d}>
-                  {d} tumani
+              {DISTRICT_OPTIONS.map((opt) => (
+                <option key={opt.value} value={opt.value}>
+                  {opt.label}
                 </option>
               ))}
             </select>

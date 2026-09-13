@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2 } from 'lucide-react';
+import { Loader2, Check } from 'lucide-react';
 
 export const Button = React.forwardRef(function Button(
   {
@@ -7,6 +7,8 @@ export const Button = React.forwardRef(function Button(
     variant = 'primary',
     size = 'md',
     isLoading = false,
+    loadingText,
+    isSuccess = false,
     disabled = false,
     className = '',
     type = 'button',
@@ -27,22 +29,34 @@ export const Button = React.forwardRef(function Button(
   };
 
   const sizes = {
-    sm: 'text-xs px-3 py-1.5 gap-1.5',
-    md: 'text-sm px-4 py-2.5 gap-2',
-    lg: 'text-base px-6 py-3.5 gap-2.5',
-    icon: 'p-2',
+    sm: 'text-xs px-3 py-1.5 gap-1.5 min-h-[32px]',
+    md: 'text-sm px-4 py-2.5 gap-2 min-h-[42px]',
+    lg: 'text-base px-6 py-3.5 gap-2.5 min-h-[48px]',
+    icon: 'p-2 min-h-[36px] min-w-[36px]',
   };
 
   return (
     <button
       ref={ref}
       type={type}
-      disabled={disabled || isLoading}
+      disabled={disabled || isLoading || isSuccess}
+      aria-busy={isLoading}
       className={`${baseStyles} ${variants[variant] || variants.primary} ${sizes[size] || sizes.md} ${className}`}
       {...props}
     >
-      {isLoading && <Loader2 className="w-4 h-4 animate-spin shrink-0" />}
-      {children}
+      {isLoading ? (
+        <>
+          <Loader2 className="w-4 h-4 animate-spin shrink-0" aria-hidden="true" />
+          <span>{loadingText || children}</span>
+        </>
+      ) : isSuccess ? (
+        <>
+          <Check className="w-4 h-4 text-white check-success-pop shrink-0" aria-hidden="true" />
+          <span>{children}</span>
+        </>
+      ) : (
+        children
+      )}
     </button>
   );
 });

@@ -11,6 +11,7 @@ import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import Skeleton from '../../components/ui/Skeleton';
 import { formatPrice } from '../../utils/formatters';
 import { SERVICE_TYPE_CONFIG } from '../../utils/status';
+import { normalizeApiError } from '../../utils/error';
 import { ArrowLeft, Sparkles, Trash2, PlusCircle, Music, Car, Utensils, Volume2 } from 'lucide-react';
 
 export function OwnerServicesPage() {
@@ -19,7 +20,7 @@ export function OwnerServicesPage() {
   const toast = useToast();
   const queryClient = useQueryClient();
 
-  const [deletingServiceId, setDeletingServiceId] = useState(null);
+  const [deletingService, setDeletingService] = useState(null);
 
   // Form state
   const [serviceType, setServiceType] = useState('SINGER');
@@ -41,27 +42,32 @@ export function OwnerServicesPage() {
   const addMutation = useMutation({
     mutationFn: (payload) => servicesApi.addHallService(id, payload),
     onSuccess: () => {
-      toast.success('Xizmat muvaffaqiyatli qo\'shildi!');
+      toast.success("Xizmat muvaffaqiyatli qo'shildi!");
       setName('');
       setPrice('');
       setDescription('');
       queryClient.invalidateQueries({ queryKey: ['hall-services-list', id] });
+      queryClient.invalidateQueries({ queryKey: ['hall-for-services', id] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Xizmatni qo\'shishda xatolik yuz berdi.');
+      const normalized = normalizeApiError(err, "Xizmatni qo'shishda xatolik yuz berdi.");
+      toast.error(normalized.message);
     },
   });
 
   // Delete service mutation
   const deleteMutation = useMutation({
-    mutationFn: (serviceId) => servicesApi.deleteHallService(id, serviceId),
+    mutationFn: ({ serviceId, serviceType }) =>
+      servicesApi.deleteHallService(id, serviceId, serviceType),
     onSuccess: () => {
-      toast.success('Xizmat o\'chirildi!');
-      setDeletingServiceId(null);
+      toast.success("Xizmat o'chirildi!");
+      setDeletingService(null);
       queryClient.invalidateQueries({ queryKey: ['hall-services-list', id] });
+      queryClient.invalidateQueries({ queryKey: ['hall-for-services', id] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Xizmatni o\'chirishda xatolik yuz berdi.');
+      const normalized = normalizeApiError(err, "Xizmatni o'chirishda xatolik yuz berdi.");
+      toast.error(normalized.message);
     },
   });
 
@@ -232,7 +238,7 @@ export function OwnerServicesPage() {
 
                     <button
                       type="button"
-                      onClick={() => setDeletingServiceId(srv.id)}
+                      onClick={() => setDeletingService(srv)}
                       className="p-2 rounded-lg text-rose-600 hover:bg-rose-50 transition-colors"
                       title="O'chirish"
                     >
@@ -248,9 +254,14 @@ export function OwnerServicesPage() {
 
       {/* Confirm Delete Dialog */}
       <ConfirmDialog
-        isOpen={!!deletingServiceId}
-        onClose={() => setDeletingServiceId(null)}
-        onConfirm={() => deleteMutation.mutate(deletingServiceId)}
+        isOpen={!!deletingService}
+        onClose={() => setDeletingService(null)}
+        onConfirm={() =>
+          deleteMutation.mutate({
+            serviceId: deletingService.id,
+            serviceType: deletingService.serviceType,
+          })
+        }
         isLoading={deleteMutation.isPending}
         title="Xizmatni o'chirish"
         message="Haqiqatan ham bu xizmatni to'yxonadan olib tashlamoqchimisiz?"

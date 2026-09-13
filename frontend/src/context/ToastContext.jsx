@@ -1,26 +1,58 @@
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useRef } from 'react';
 import { CheckCircle2, AlertCircle, Info, AlertTriangle, X } from 'lucide-react';
 
 const ToastContext = createContext(null);
+const MAX_VISIBLE_TOASTS = 3;
+const DUPLICATE_SUPPRESSION_MS = 2000;
 
 export function ToastProvider({ children }) {
   const [toasts, setToasts] = useState([]);
+  const recentToastsRef = useRef(new Map());
 
   const removeToast = useCallback((id) => {
     setToasts((prev) => prev.filter((toast) => toast.id !== id));
   }, []);
 
-  const showToast = useCallback((message, type = 'info', duration = 4000) => {
-    const id = Date.now() + Math.random().toString(36).slice(2, 6);
-    setToasts((prev) => [...prev, { id, message, type }]);
+  const showToast = useCallback(
+    (message, type = 'info', duration = 4000) => {
+      if (!message || typeof message !== 'string') return null;
 
-    if (duration > 0) {
-      setTimeout(() => {
-        removeToast(id);
-      }, duration);
-    }
-    return id;
-  }, [removeToast]);
+      const now = Date.now();
+      const signature = `${type}:${message.trim()}`;
+      const lastShown = recentToastsRef.current.get(signature);
+
+      // Suppress duplicate toasts within cooldown window
+      if (lastShown && now - lastShown < DUPLICATE_SUPPRESSION_MS) {
+        return null;
+      }
+
+      recentToastsRef.current.set(signature, now);
+
+      // Clean up old entries from recent map
+      for (const [sig, timestamp] of recentToastsRef.current.entries()) {
+        if (now - timestamp > 10000) {
+          recentToastsRef.current.delete(sig);
+        }
+      }
+
+      const id = `${now}-${Math.random().toString(36).slice(2, 7)}`;
+
+      setToasts((prev) => {
+        const next = [...prev, { id, message, type }];
+        // Keep at most MAX_VISIBLE_TOASTS
+        return next.length > MAX_VISIBLE_TOASTS ? next.slice(-MAX_VISIBLE_TOASTS) : next;
+      });
+
+      if (duration > 0) {
+        setTimeout(() => {
+          removeToast(id);
+        }, duration);
+      }
+
+      return id;
+    },
+    [removeToast]
+  );
 
   const success = useCallback((msg, duration) => showToast(msg, 'success', duration), [showToast]);
   const error = useCallback((msg, duration) => showToast(msg, 'error', duration), [showToast]);

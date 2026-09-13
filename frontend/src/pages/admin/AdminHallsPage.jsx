@@ -10,7 +10,7 @@ import Skeleton from '../../components/ui/Skeleton';
 import EmptyState from '../../components/ui/EmptyState';
 import { formatPrice } from '../../utils/formatters';
 import { HALL_STATUS_CONFIG } from '../../utils/status';
-import { TASHKENT_DISTRICTS } from '../../constants/districts';
+import { DISTRICT_OPTIONS } from '../../constants/districts';
 import { Building2, Search, Trash2, ExternalLink, Check } from 'lucide-react';
 
 export function AdminHallsPage() {
@@ -84,7 +84,7 @@ export function AdminHallsPage() {
           value={district}
           onChange={(e) => setDistrict(e.target.value)}
           placeholder="Barcha tumanlar"
-          options={TASHKENT_DISTRICTS.map((d) => ({ value: d, label: `${d} tumani` }))}
+          options={DISTRICT_OPTIONS}
         />
 
         <Select

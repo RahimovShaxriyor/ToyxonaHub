@@ -14,7 +14,10 @@ export const registerSchema = {
       .max(30)
       .regex(/^[a-zA-Z0-9_]+$/, 'Username can only contain letters, numbers, and underscores'),
     password: z.string().min(6, 'Password must be at least 6 characters').max(100),
-    phone: z.string().trim().regex(phoneRegex, 'Invalid phone number format (e.g. +998901234567)'),
+    phone: z.preprocess(
+      (val) => (typeof val === 'string' ? val.trim().replace(/[\s\-().]/g, '') : val),
+      z.string().regex(phoneRegex, 'Invalid phone number format (e.g. +998901234567)')
+    ),
   }),
 };
 

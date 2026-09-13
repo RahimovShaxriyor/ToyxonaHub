@@ -1,90 +1,119 @@
-import React from 'react';
-import { Link } from 'react-router-dom';
-import { Building2 } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { Calendar, Sparkles } from 'lucide-react';
+import { hallsApi } from '../../api/halls.api';
+import { formatDate } from '../../utils/formatters';
 
-export function AuthLayout({
-  children,
-  title,
-  subtitle,
-  step, // 1 for register, 2 for OTP, undefined for login
-  bannerMessage,
-}) {
+export function AuthLayout({ children }) {
+  const location = useLocation();
+  const [pendingDraft, setPendingDraft] = useState(null);
+  const [fetchedHallName, setFetchedHallName] = useState('');
+
+  // Detect active pending booking in sessionStorage
+  useEffect(() => {
+    try {
+      let foundDraft = null;
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i);
+        if (key && key.startsWith('toyxonahub_pending_booking_')) {
+          const raw = sessionStorage.getItem(key);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            const hallId = key.replace('toyxonahub_pending_booking_', '');
+            foundDraft = { hallId, ...parsed };
+            break;
+          }
+        }
+      }
+      setPendingDraft(foundDraft);
+
+      // If draft has hallId but no hallName, fetch name from API
+      if (foundDraft && foundDraft.hallId && !foundDraft.hallName) {
+        hallsApi
+          .getHallById(foundDraft.hallId)
+          .then((res) => {
+            const h = res.data || res;
+            if (h?.name) setFetchedHallName(h.name);
+          })
+          .catch(() => {});
+      }
+    } catch {
+      setPendingDraft(null);
+    }
+  }, [location.pathname]);
+
+  const displayHallName = pendingDraft?.hallName || fetchedHallName;
+
   return (
-    <div className="min-h-[calc(100vh-5rem)] flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8 bg-canvas">
-      <div className="w-full max-w-md space-y-6">
-        {/* Brand Header */}
-        <div className="text-center space-y-2">
-          <Link to="/" className="inline-flex items-center gap-3 group">
-            <div className="w-12 h-12 rounded-2xl bg-bronze flex items-center justify-center text-white shadow-md transition-transform group-hover:scale-105">
-              <Building2 className="w-6 h-6" />
-            </div>
-            <span className="text-2xl font-bold font-serif tracking-tight text-ink">
-              Toyxona<span className="text-bronze">Hub</span>
-            </span>
-          </Link>
-          <h1 className="font-serif text-2xl font-bold text-ink tracking-tight">
-            {title}
-          </h1>
-          {subtitle && (
-            <p className="text-xs sm:text-sm text-muted max-w-xs mx-auto">
-              {subtitle}
+    <div className="min-h-[calc(100vh-5rem)] flex flex-col lg:flex-row bg-canvas">
+      {/* Desktop Left Brand Showcase Column */}
+      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-ink select-none">
+        <img
+          src="/images/auth/auth-wedding-hall.webp"
+          alt="ToyxonaHub Tantanalar Saroyi"
+          className="absolute inset-0 w-full h-full object-cover object-center"
+          loading="eager"
+        />
+        {/* Rich Dark Gradient Overlay */}
+        <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/65 to-ink/20" />
+
+        {/* Content Over Overlay */}
+        <div className="relative z-10 flex flex-col justify-between p-12 lg:p-16 w-full text-white">
+          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/10 backdrop-blur-md border border-white/15 text-xs font-semibold text-bronze-200 w-fit">
+            <Sparkles className="w-3.5 h-3.5 text-bronze-300" />
+            <span>ToyxonaHub • Rasmiy Portal</span>
+          </div>
+
+          <div className="space-y-4 max-w-lg">
+            <h2 className="font-serif text-3xl xl:text-4xl font-bold leading-tight tracking-tight text-white">
+              Toshkentning eng sara to'yxonalari va tantanalar saroylari
+            </h2>
+            <p className="text-sm xl:text-base text-white/80 leading-relaxed font-light">
+              Orzuingizdagi to'yni ortiqcha tashvishlarsiz, shaffof narxlar va 20% avans bilan qulay bron qiling.
             </p>
-          )}
+          </div>
+
+          <div className="pt-6 border-t border-white/10 flex items-center justify-between text-xs text-white/60">
+            <span>© 2026 ToyxonaHub. Barcha huquqlar himoyalangan.</span>
+            <span>Xavfsiz va ishonchli</span>
+          </div>
         </div>
+      </div>
 
-        {/* Optional Owner / Redirect Banner */}
-        {bannerMessage && (
-          <div className="p-3.5 rounded-xl bg-bronze-50 border border-bronze-200 text-bronze-800 text-xs font-medium text-center animate-in fade-in duration-ui">
-            {bannerMessage}
-          </div>
-        )}
-
-        {/* Step Indicator for Register -> OTP flow */}
-        {step && (
-          <div className="flex items-center justify-center gap-2 py-1">
+      {/* Right Column: Form Container Surface */}
+      <div className="w-full lg:w-1/2 flex flex-col justify-center items-center px-4 sm:px-8 lg:px-12 py-8 sm:py-12 bg-canvas overflow-y-auto">
+        <div className="w-full max-w-md space-y-6">
+          {/* Pending Booking Context Banner if active */}
+          {pendingDraft && (
             <div
-              className={`flex items-center gap-1.5 text-xs font-semibold ${
-                step >= 1 ? 'text-bronze' : 'text-muted'
-              }`}
+              role="status"
+              className="p-4 rounded-2xl bg-bronze-50 border border-bronze-200 text-ink shadow-xs animate-in fade-in duration-ui"
             >
-              <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  step >= 1
-                    ? 'bg-bronze text-white shadow-xs'
-                    : 'bg-canvas border border-border text-muted'
-                }`}
-              >
-                1
-              </span>
-              <span>Ro'yxatdan o'tish</span>
+              <div className="flex items-start gap-3">
+                <div className="w-8 h-8 rounded-xl bg-bronze/15 text-bronze flex items-center justify-center shrink-0 mt-0.5">
+                  <Calendar className="w-4 h-4" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-semibold text-bronze uppercase tracking-wider">
+                    Siz bronni davom ettiryapsiz
+                  </p>
+                  {displayHallName && (
+                    <p className="text-sm font-bold text-ink truncate mt-0.5">
+                      {displayHallName}
+                    </p>
+                  )}
+                  <p className="text-xs text-muted mt-0.5">
+                    {pendingDraft.selectedDate ? `${formatDate(pendingDraft.selectedDate)}` : ''}
+                    {pendingDraft.selectedDate && pendingDraft.guestCount ? ' • ' : ''}
+                    {pendingDraft.guestCount ? `${pendingDraft.guestCount} mehmon` : ''}
+                  </p>
+                </div>
+              </div>
             </div>
-            <div
-              className={`w-8 h-0.5 transition-colors duration-ui ${
-                step >= 2 ? 'bg-bronze' : 'bg-border'
-              }`}
-            />
-            <div
-              className={`flex items-center gap-1.5 text-xs font-semibold ${
-                step >= 2 ? 'text-bronze' : 'text-muted'
-              }`}
-            >
-              <span
-                className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] ${
-                  step >= 2
-                    ? 'bg-bronze text-white shadow-xs'
-                    : 'bg-canvas border border-border text-muted'
-                }`}
-              >
-                2
-              </span>
-              <span>Tasdiqlash</span>
-            </div>
-          </div>
-        )}
+          )}
 
-        {/* Card Container with smooth inner form animation */}
-        <div className="bg-white p-7 sm:p-8 rounded-3xl border border-border shadow-card animate-in fade-in slide-in-from-bottom-2 duration-form ease-spring-smooth">
-          {children}
+          {/* Render Active Route Child or Passed Children */}
+          {children || <Outlet />}
         </div>
       </div>
     </div>

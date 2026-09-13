@@ -27,12 +27,14 @@ export const bookingsApi = {
   },
 
   getHallBookings: async (hallId, params = {}) => {
-    const response = await apiClient.get(`/wedding-halls/${hallId}/bookings`, { params });
+    const response = await apiClient.get('/bookings/owner', {
+      params: { weddingHallId: hallId, ...params },
+    });
     return response.data;
   },
 
   getAllBookings: async (params = {}) => {
-    const response = await apiClient.get('/bookings', { params });
+    const response = await apiClient.get('/bookings/admin', { params });
     return response.data;
   },
 };

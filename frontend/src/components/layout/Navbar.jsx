@@ -5,7 +5,7 @@ import Button from '../ui/Button';
 import { Menu, X, User, LogOut, Calendar, Building2, ShieldCheck, ChevronDown } from 'lucide-react';
 
 export function Navbar() {
-  const { user, isAuthenticated, logout, isAdmin, isOwner, isUser } = useAuth();
+  const { user, isAuthenticated, logout, isAdmin, isOwner, isUser, isLoading } = useAuth();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const [isScrolled, setIsScrolled] = useState(false);
@@ -111,9 +111,11 @@ export function Navbar() {
         </nav>
 
         {/* User Auth Buttons / Dropdown */}
-        <div className="hidden md:flex items-center gap-3">
-          {isAuthenticated ? (
-            <div className="relative">
+        <div className="hidden md:flex items-center gap-3 transition-opacity duration-ui min-h-[40px]">
+          {isLoading ? (
+            <div className="w-24 h-9 bg-zinc-200/50 animate-pulse rounded-full" />
+          ) : isAuthenticated ? (
+            <div className="relative animate-in fade-in duration-ui">
               <button
                 type="button"
                 onClick={() => setDropdownOpen(!dropdownOpen)}
@@ -188,11 +190,9 @@ export function Navbar() {
                         className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-ink hover:bg-canvas transition-colors"
                       >
                         <ShieldCheck className="w-4 h-4 text-muted" />
-                        Admin boshqaruvi
+                        Admin paneli
                       </Link>
                     )}
-
-                    <div className="border-t border-border/60 my-1" />
 
                     <button
                       type="button"
@@ -207,7 +207,7 @@ export function Navbar() {
               )}
             </div>
           ) : (
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 animate-in fade-in duration-ui">
               <Button
                 variant="ghost"
                 size="sm"

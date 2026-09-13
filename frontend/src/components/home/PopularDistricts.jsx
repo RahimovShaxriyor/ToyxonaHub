@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { hallsApi } from '../../api/halls.api';
 import { MapPin, ArrowRight } from 'lucide-react';
-import { TASHKENT_DISTRICTS } from '../../constants/districts';
+import { TASHKENT_DISTRICTS, getDistrictLabel } from '../../constants/districts';
 
 export function PopularDistricts() {
   // Query all halls to compute real district counts accurately
@@ -71,7 +71,7 @@ export function PopularDistricts() {
 
               <div>
                 <h3 className="font-serif font-bold text-sm sm:text-base text-ink group-hover:text-bronze transition-colors line-clamp-1">
-                  {dist} tumani
+                  {getDistrictLabel(dist)} tumani
                 </h3>
                 {count !== null ? (
                   <p className="text-xs text-muted mt-0.5">

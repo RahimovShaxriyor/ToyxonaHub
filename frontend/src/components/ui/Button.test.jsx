@@ -26,8 +26,17 @@ describe('Button component', () => {
   });
 
   it('disables button and shows spinner when isLoading is true', () => {
-    render(<Button isLoading>Yuklanmoqda</Button>);
+    render(<Button isLoading loadingText="Kuting...">Yuklanmoqda</Button>);
     const btn = screen.getByRole('button');
     expect(btn).toBeDisabled();
+    expect(btn).toHaveAttribute('aria-busy', 'true');
+    expect(screen.getByText('Kuting...')).toBeInTheDocument();
+  });
+
+  it('renders checkmark and disables clicks when isSuccess is true', () => {
+    render(<Button isSuccess>Muvaffaqiyatli</Button>);
+    const btn = screen.getByRole('button');
+    expect(btn).toBeDisabled();
+    expect(screen.getByText('Muvaffaqiyatli')).toBeInTheDocument();
   });
 });

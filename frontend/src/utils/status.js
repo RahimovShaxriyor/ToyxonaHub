@@ -17,6 +17,17 @@ export const BOOKING_STATUS_CONFIG = {
 };
 
 export const PAYMENT_STATUS_CONFIG = {
+  PENDING: {
+    label: "To'lov kutilmoqda",
+    variant: 'warning',
+    bg: 'bg-amber-50 text-amber-700 border-amber-200',
+  },
+  PAID: {
+    label: "20% avans to'langan",
+    variant: 'success',
+    bg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  },
+  // Legacy / UI aliases
   UNPAID: {
     label: "To'lanmagan",
     variant: 'warning',

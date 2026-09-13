@@ -5,11 +5,13 @@ import { Routes, Route, Navigate } from 'react-router-dom';
 import PublicLayout from '../components/layout/PublicLayout';
 import OwnerLayout from '../components/layout/OwnerLayout';
 import AdminLayout from '../components/layout/AdminLayout';
+import AuthLayout from '../components/layout/AuthLayout';
 
 // Guards
 import ProtectedRoute from './ProtectedRoute';
 import RoleRoute from './RoleRoute';
 import { PageSkeleton } from '../components/ui/Skeleton';
+import TopProgressBar from '../components/ui/TopProgressBar';
 
 // Public Pages (Core)
 import HomePage from '../pages/public/HomePage';
@@ -43,17 +45,23 @@ const AdminBookingsPage = lazy(() => import('../pages/admin/AdminBookingsPage'))
 
 export function AppRoutes() {
   return (
-    <Suspense fallback={<PageSkeleton />}>
-      <Routes>
-        {/* Public & Customer Routes */}
-        <Route element={<PublicLayout />}>
-          <Route path="/" element={<HomePage />} />
-          <Route path="/catalog" element={<CatalogPage />} />
-          <Route path="/halls" element={<Navigate to="/catalog" replace />} />
-          <Route path="/halls/:id" element={<HallDetailPage />} />
-          <Route path="/login" element={<LoginPage />} />
-          <Route path="/register" element={<RegisterPage />} />
-          <Route path="/verify-otp" element={<OtpVerificationPage />} />
+    <>
+      <TopProgressBar />
+      <Suspense fallback={<PageSkeleton />}>
+        <Routes>
+          {/* Public & Customer Routes */}
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/catalog" element={<CatalogPage />} />
+            <Route path="/halls" element={<Navigate to="/catalog" replace />} />
+            <Route path="/halls/:id" element={<HallDetailPage />} />
+
+            {/* Nested Auth Routes inside Shared AuthLayout Shell */}
+            <Route element={<AuthLayout />}>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/register" element={<RegisterPage />} />
+              <Route path="/verify-otp" element={<OtpVerificationPage />} />
+            </Route>
 
           {/* User Protected Routes */}
           <Route
@@ -118,7 +126,8 @@ export function AppRoutes() {
           <Route path="bookings" element={<AdminBookingsPage />} />
         </Route>
       </Routes>
-    </Suspense>
+      </Suspense>
+    </>
   );
 }
 

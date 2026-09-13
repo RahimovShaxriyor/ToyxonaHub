@@ -56,6 +56,8 @@ test.describe('Critical Guest Booking Flow', () => {
     await expect(modalHeading).toBeVisible({ timeout: 10000 });
 
     // Contact info pre-filled, submit booking
+    const nameInput = page.locator('input[placeholder="Ali"]');
+    await expect(nameInput).not.toHaveValue('', { timeout: 5000 });
     const submitBookingBtn = page.getByRole('button', { name: /Tasdiqlash va bron qilish/i });
     await expect(submitBookingBtn).toBeVisible();
     await submitBookingBtn.click();
@@ -68,6 +70,9 @@ test.describe('Critical Guest Booking Flow', () => {
     const payBtn = page.getByRole('button', { name: /20% avansni to'lash/i });
     await expect(payBtn).toBeVisible();
     await payBtn.click();
+
+    // Assert payment success toast
+    await expect(page.locator("text=Muvaffaqiyatli to'landi")).toBeVisible({ timeout: 10000 });
 
     // 12. Verify redirection to My Bookings and verify booking exists
     await expect(page).toHaveURL(/\/my-bookings/, { timeout: 10000 });

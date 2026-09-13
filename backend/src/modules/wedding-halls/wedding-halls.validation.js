@@ -13,7 +13,10 @@ export const createHallSchema = {
     address: z.string().trim().min(3, 'Address must be at least 3 characters').max(200),
     capacity: z.coerce.number().int().min(10, 'Capacity must be at least 10').max(10000),
     pricePerSeat: z.coerce.number().positive('Price per seat must be a positive number'),
-    phone: z.string().trim().regex(phoneRegex, 'Invalid phone number format'),
+    phone: z.preprocess(
+      (val) => (typeof val === 'string' ? val.trim().replace(/[\s\-().]/g, '') : val),
+      z.string().regex(phoneRegex, 'Invalid phone number format')
+    ),
     ownerId: z.string().uuid().optional(),
   }),
 };
@@ -25,7 +28,10 @@ export const updateHallSchema = {
     address: z.string().trim().min(3).max(200).optional(),
     capacity: z.coerce.number().int().min(10).max(10000).optional(),
     pricePerSeat: z.coerce.number().positive().optional(),
-    phone: z.string().trim().regex(phoneRegex).optional(),
+    phone: z.preprocess(
+      (val) => (typeof val === 'string' ? val.trim().replace(/[\s\-().]/g, '') : val),
+      z.string().regex(phoneRegex).optional()
+    ),
   }),
 };
 
@@ -57,6 +63,7 @@ export const listHallsQuerySchema = {
     order: z.enum(['asc', 'desc']).optional().default('desc'),
     page: z.coerce.number().int().positive().optional().default(1),
     limit: z.coerce.number().int().positive().max(100).optional().default(10),
+    ownerId: z.string().uuid().optional(),
   }),
 };
 

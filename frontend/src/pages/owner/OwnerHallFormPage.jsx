@@ -1,14 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { hallsApi } from '../../api/halls.api';
 import { useToast } from '../../context/ToastContext';
-import { TASHKENT_DISTRICTS } from '../../constants/districts';
+import { DISTRICT_OPTIONS } from '../../constants/districts';
 import Button from '../../components/ui/Button';
 import Input from '../../components/ui/Input';
 import Select from '../../components/ui/Select';
 import Skeleton from '../../components/ui/Skeleton';
 import { ArrowLeft } from 'lucide-react';
+import { cleanPhoneNumber } from '../../utils/phone';
+import { normalizeApiError } from '../../utils/error';
 
 export function OwnerHallFormPage() {
   const { id } = useParams();
@@ -16,16 +18,18 @@ export function OwnerHallFormPage() {
   const navigate = useNavigate();
   const toast = useToast();
   const queryClient = useQueryClient();
+  const isSubmittingRef = useRef(false);
 
   const [formData, setFormData] = useState({
     name: '',
-    district: 'Chilonzor',
+    district: 'CHILONZOR',
     address: '',
-    capacity: 300,
-    pricePerSeat: 150000,
-    contactPhone: '+998 90 123 45 67',
+    capacity: '',
+    pricePerSeat: '',
+    phone: '',
     description: '',
   });
+  const [fieldErrors, setFieldErrors] = useState({});
 
   // Fetch hall data if editing
   const { data: existingHall, isLoading } = useQuery({
@@ -38,11 +42,11 @@ export function OwnerHallFormPage() {
     if (existingHall) {
       setFormData({
         name: existingHall.name || '',
-        district: existingHall.district || 'Chilonzor',
+        district: existingHall.district || 'CHILONZOR',
         address: existingHall.address || '',
         capacity: existingHall.capacity || 300,
         pricePerSeat: existingHall.pricePerSeat || 150000,
-        contactPhone: existingHall.contactPhone || '',
+        phone: existingHall.phone || '',
         description: existingHall.description || '',
       });
     }
@@ -52,8 +56,11 @@ export function OwnerHallFormPage() {
     const { name, value, type } = e.target;
     setFormData((prev) => ({
       ...prev,
-      [name]: type === 'number' ? Number(value) : value,
+      [name]: type === 'number' ? (value === '' ? '' : Number(value)) : value,
     }));
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
   // Submit mutation
@@ -67,16 +74,67 @@ export function OwnerHallFormPage() {
           : "To'yxona qo'shildi va tasdiqlash uchun adminga yuborildi!"
       );
       queryClient.invalidateQueries({ queryKey: ['owner-halls-list'] });
+      queryClient.invalidateQueries({ queryKey: ['admin-pending-halls'] });
+      queryClient.invalidateQueries({ queryKey: ['hall-detail', id] });
       navigate('/owner/halls');
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Xatolik yuz berdi. Maydonlarni tekshiring.');
+      const normalized = normalizeApiError(err, 'Xatolik yuz berdi. Maydonlarni tekshiring.');
+      if (Object.keys(normalized.fieldErrors).length > 0) {
+        setFieldErrors(normalized.fieldErrors);
+      }
+      toast.error(normalized.message);
+    },
+    onSettled: () => {
+      isSubmittingRef.current = false;
     },
   });
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    mutation.mutate(formData);
+
+    if (isSubmittingRef.current || mutation.isPending) return;
+
+    setFieldErrors({});
+
+    const errors = {};
+    if (!formData.name || formData.name.trim().length < 2) {
+      errors.name = "To'yxona nomi kamida 2 ta belgidan iborat bo'lishi lozim.";
+    }
+    if (!formData.address || formData.address.trim().length < 3) {
+      errors.address = "Manzil kamida 3 ta belgidan iborat bo'lishi lozim.";
+    }
+    if (!formData.capacity || Number(formData.capacity) < 10) {
+      errors.capacity = "Sig'im kamida 10 kishi bo'lishi lozim.";
+    }
+    if (!formData.pricePerSeat || Number(formData.pricePerSeat) <= 0) {
+      errors.pricePerSeat = "O'rindiq narxi musbat son bo'lishi lozim.";
+    }
+
+    const cleanedPhone = cleanPhoneNumber(formData.phone);
+    if (!cleanedPhone || !/^\+998\d{9}$/.test(cleanedPhone)) {
+      errors.phone = "Telefon raqamini to'g'ri formatda kiriting (masalan: +998901234567).";
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setFieldErrors(errors);
+      const firstError = Object.values(errors)[0];
+      toast.error(firstError);
+      return;
+    }
+
+    isSubmittingRef.current = true;
+
+    const payload = {
+      name: formData.name.trim(),
+      district: formData.district,
+      address: formData.address.trim(),
+      capacity: Number(formData.capacity),
+      pricePerSeat: Number(formData.pricePerSeat),
+      phone: cleanedPhone,
+    };
+
+    mutation.mutate(payload);
   };
 
   if (isEditing && isLoading) {
@@ -110,7 +168,7 @@ export function OwnerHallFormPage() {
         </div>
       </div>
 
-      <form onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border p-6 sm:p-8 shadow-card space-y-6">
+      <form noValidate onSubmit={handleSubmit} className="bg-white rounded-2xl border border-border p-6 sm:p-8 shadow-card space-y-6">
         {/* Basic info */}
         <div className="space-y-4">
           <Input
@@ -118,6 +176,7 @@ export function OwnerHallFormPage() {
             name="name"
             value={formData.name}
             onChange={handleChange}
+            error={fieldErrors.name}
             placeholder="Masalan: 'Versal' tantanalar saroyi"
             required
           />
@@ -128,7 +187,8 @@ export function OwnerHallFormPage() {
               name="district"
               value={formData.district}
               onChange={handleChange}
-              options={TASHKENT_DISTRICTS.map((d) => ({ value: d, label: `${d} tumani` }))}
+              options={DISTRICT_OPTIONS}
+              error={fieldErrors.district}
               required
             />
             <Input
@@ -136,6 +196,7 @@ export function OwnerHallFormPage() {
               name="address"
               value={formData.address}
               onChange={handleChange}
+              error={fieldErrors.address}
               placeholder="Ko'cha va mo'ljal"
               required
             />
@@ -146,28 +207,32 @@ export function OwnerHallFormPage() {
               label="Sig'im (kishi)"
               type="number"
               name="capacity"
-              min="50"
-              max="3000"
+              min="10"
+              max="10000"
               value={formData.capacity}
               onChange={handleChange}
+              error={fieldErrors.capacity}
               required
             />
             <Input
               label="O'rindiq narxi (so'm)"
               type="number"
               name="pricePerSeat"
-              min="10000"
+              min="1000"
               step="5000"
               value={formData.pricePerSeat}
               onChange={handleChange}
+              error={fieldErrors.pricePerSeat}
               required
             />
             <Input
               label="Aloqa telefoni"
-              name="contactPhone"
-              value={formData.contactPhone}
+              name="phone"
+              value={formData.phone}
               onChange={handleChange}
+              error={fieldErrors.phone}
               placeholder="+998 90 123 45 67"
+              helperText="Format: +998XXXXXXXXX"
               required
             />
           </div>
@@ -202,6 +267,7 @@ export function OwnerHallFormPage() {
             variant="primary"
             size="md"
             isLoading={mutation.isPending}
+            disabled={mutation.isPending}
           >
             {isEditing ? "O'zgarishlarni saqlash" : "To'yxonani yaratish"}
           </Button>

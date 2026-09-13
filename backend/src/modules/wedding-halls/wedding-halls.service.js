@@ -155,7 +155,7 @@ export class WeddingHallsService {
   }
 
   async listHalls(user, query) {
-    const cacheKey = `hall:list:${user?.role || 'public'}:${JSON.stringify(query)}`;
+    const cacheKey = `hall:list:${user?.id || user?.role || 'public'}:${JSON.stringify(query)}`;
     const cached = await cacheService.get(cacheKey);
     if (cached) {
       return cached;
@@ -164,39 +164,64 @@ export class WeddingHallsService {
     const { page, limit } = query;
     const { skip, take } = buildPrismaPagination({ page, limit });
 
-    const where = {};
+    const andConditions = [];
 
     // Role-based visibility
     if (user?.role === ROLES.ADMIN) {
       if (query.status) {
-        where.status = query.status;
+        andConditions.push({ status: query.status });
+      }
+      if (query.ownerId) {
+        andConditions.push({ ownerId: query.ownerId });
+      }
+    } else if (user?.role === ROLES.OWNER) {
+      if (query.ownerId) {
+        andConditions.push({ ownerId: query.ownerId });
+        if (query.ownerId === user.id) {
+          if (query.status) {
+            andConditions.push({ status: query.status });
+          }
+        } else {
+          andConditions.push({ status: HALL_STATUS.APPROVED });
+        }
+      } else {
+        // Owner sees APPROVED halls OR any halls owned by themselves
+        andConditions.push({
+          OR: [{ status: HALL_STATUS.APPROVED }, { ownerId: user.id }],
+        });
       }
     } else {
-      where.status = HALL_STATUS.APPROVED;
+      andConditions.push({ status: HALL_STATUS.APPROVED });
     }
 
     if (query.district) {
-      where.district = query.district;
+      andConditions.push({ district: query.district });
     }
 
     if (query.minCapacity || query.maxCapacity) {
-      where.capacity = {};
-      if (query.minCapacity) where.capacity.gte = Number(query.minCapacity);
-      if (query.maxCapacity) where.capacity.lte = Number(query.maxCapacity);
+      const cap = {};
+      if (query.minCapacity) cap.gte = Number(query.minCapacity);
+      if (query.maxCapacity) cap.lte = Number(query.maxCapacity);
+      andConditions.push({ capacity: cap });
     }
 
     if (query.minPrice || query.maxPrice) {
-      where.pricePerSeat = {};
-      if (query.minPrice) where.pricePerSeat.gte = query.minPrice;
-      if (query.maxPrice) where.pricePerSeat.lte = query.maxPrice;
+      const price = {};
+      if (query.minPrice) price.gte = query.minPrice;
+      if (query.maxPrice) price.lte = query.maxPrice;
+      andConditions.push({ pricePerSeat: price });
     }
 
     if (query.search) {
-      where.OR = [
-        { name: { contains: query.search, mode: 'insensitive' } },
-        { address: { contains: query.search, mode: 'insensitive' } },
-      ];
+      andConditions.push({
+        OR: [
+          { name: { contains: query.search, mode: 'insensitive' } },
+          { address: { contains: query.search, mode: 'insensitive' } },
+        ],
+      });
     }
+
+    const where = andConditions.length > 0 ? { AND: andConditions } : {};
 
     const sortBy = query.sortBy || 'createdAt';
     const order = query.order || 'desc';

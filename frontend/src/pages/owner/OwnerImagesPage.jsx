@@ -6,6 +6,7 @@ import { useToast } from '../../context/ToastContext';
 import Button from '../../components/ui/Button';
 import ConfirmDialog from '../../components/ui/ConfirmDialog';
 import Skeleton from '../../components/ui/Skeleton';
+import { normalizeApiError } from '../../utils/error';
 import { ArrowLeft, Upload, Star, Trash2 } from 'lucide-react';
 
 export function OwnerImagesPage() {
@@ -35,7 +36,8 @@ export function OwnerImagesPage() {
       queryClient.invalidateQueries({ queryKey: ['hall-images', id] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Suratni yuklashda xatolik yuz berdi.');
+      const normalized = normalizeApiError(err, 'Suratni yuklashda xatolik yuz berdi.');
+      toast.error(normalized.message);
     },
   });
 
@@ -43,11 +45,12 @@ export function OwnerImagesPage() {
   const setPrimaryMutation = useMutation({
     mutationFn: (imageId) => hallsApi.setPrimaryImage(id, imageId),
     onSuccess: () => {
-      toast.success('Asosiy surat o\'zgartirildi!');
+      toast.success("Asosiy surat o'zgartirildi!");
       queryClient.invalidateQueries({ queryKey: ['hall-images', id] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Xatolik yuz berdi.');
+      const normalized = normalizeApiError(err, 'Xatolik yuz berdi.');
+      toast.error(normalized.message);
     },
   });
 
@@ -55,12 +58,13 @@ export function OwnerImagesPage() {
   const deleteMutation = useMutation({
     mutationFn: (imageId) => hallsApi.deleteImage(id, imageId),
     onSuccess: () => {
-      toast.success('Surat o\'chirildi!');
+      toast.success("Surat o'chirildi!");
       setDeletingImageId(null);
       queryClient.invalidateQueries({ queryKey: ['hall-images', id] });
     },
     onError: (err) => {
-      toast.error(err.response?.data?.message || 'Suratni o\'chirishda xatolik yuz berdi.');
+      const normalized = normalizeApiError(err, "Suratni o'chirishda xatolik yuz berdi.");
+      toast.error(normalized.message);
     },
   });
 
@@ -78,7 +82,7 @@ export function OwnerImagesPage() {
     }
 
     const formData = new FormData();
-    formData.append('image', selectedFile);
+    formData.append('images', selectedFile);
     formData.append('isPrimary', isPrimaryOnUpload ? 'true' : 'false');
 
     uploadMutation.mutate(formData);

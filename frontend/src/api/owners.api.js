@@ -11,8 +11,10 @@ export const ownersApi = {
     return response.data;
   },
 
-  assignHall: async (ownerId, data) => {
-    const response = await apiClient.patch(`/owners/${ownerId}/assign-hall`, data);
+  assignHall: async (ownerId, { weddingHallId } = {}) => {
+    const response = await apiClient.patch(`/wedding-halls/${weddingHallId}/assign-owner`, {
+      ownerId,
+    });
     return response.data?.data || response.data;
   },
 };
